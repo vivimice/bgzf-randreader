@@ -16,6 +16,9 @@ public class RandomAccessBgzFileTest {
     private static final File TEST_FILE = new File(
             RandomAccessBgzFileTest.class.getClassLoader().getResource("test.txt.bgz").getFile());
     
+    private static final File DEMO_FILE = new File(
+            RandomAccessBgzFileTest.class.getClassLoader().getResource("demo.bgz").getFile());
+    
     @Test
     public void speedTest() throws Exception {
         for (int i = 0; i < 1000; i++) {
@@ -54,6 +57,20 @@ public class RandomAccessBgzFileTest {
                     }
                 }
             }
+        }
+    }
+    
+    @Test
+    public void readMeTest() throws Exception {
+        RandomAccessBgzFile file = new RandomAccessBgzFile(DEMO_FILE);
+        try {
+            byte[] b = new byte[5];
+            file.seek(4);
+            file.read(b);
+            String actual = new String(b);
+            Assert.assertEquals("quick", actual);
+        } finally {
+            file.close();   // always close it, prevent memory leak
         }
     }
     
