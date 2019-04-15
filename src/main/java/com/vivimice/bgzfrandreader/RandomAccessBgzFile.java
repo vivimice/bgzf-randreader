@@ -43,8 +43,13 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
     private final long inputLength;
     private final long basePosition;
     private final Inflater inflater = new Inflater(true);
-    
+
     private long pos = 0;
+    
+    private long precedingPos = 0;
+    private byte[] precedingBlockData = null;
+    private long followingPos = 0;
+    private byte[] followingBlockData = null;
     
     /**
      * <p>Constructs a RandomAccessBgzFile instance using existing {@link RandomAccessFile}.</p>
@@ -240,7 +245,7 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
     public int read(byte[] b) throws IOException {
         return read(b, 0, b.length);
     }
-
+    
     /**
      * <p>Read up to <code>len</code> bytes of uncompressed data from this {@link RandomAccessBgzFile} 
      * into <code>b</code> starting from <code>off</code></p>
@@ -270,6 +275,21 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
             return -1;
         }
         
+        // try read from preceding/following buffer
+        if (precedingBlockData != null 
+                && pos >= precedingPos 
+                && pos + len <= precedingPos + precedingBlockData.length) {
+            System.arraycopy(precedingBlockData, (int) (pos - precedingPos), b, off, len);
+            pos += len;
+            return len;
+        } else if (followingBlockData != null 
+                && pos >= followingPos 
+                && pos + len <= followingPos + followingBlockData.length) {
+            System.arraycopy(followingBlockData, (int) (pos - followingPos), b, off, len);
+            pos += len;
+            return len;
+        }
+        
         // find blocks
         List<Entry<Long, BgzipBlock>> blocks = new ArrayList<>();
         if (!blockTree.containsKey(pos)) {
@@ -278,7 +298,8 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
         blocks.addAll(blockTree.tailMap(pos).headMap(pos + len).entrySet());
         
         int cb = 0;
-        for (Entry<Long, BgzipBlock> entry : blocks) {
+        for (int i = 0; i < blocks.size(); i++) {
+            Entry<Long, BgzipBlock> entry = blocks.get(i);
             BgzipBlock block = entry.getValue();
             long inputOffset = entry.getKey();
             int inputLength = block.getInputLength();
@@ -294,25 +315,39 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
             // Uncompress
             inflater.setInput(compressed);
             try {
-                // skip if neccessary
-                if (inputOffset < pos) {
-                    int skip = (int) (pos - inputOffset);
-                    inflater.inflate(new byte[skip]);
-                    inputLength -= skip;
-                }
-                
-                int length = (len > inputLength) ? inputLength : len;
-                int ret = inflater.inflate(b, off, length);
+                byte[] inputData = new byte[inputLength];
+                int ret = inflater.inflate(inputData);
                 if (ret == 0) {
                     throw new MalformedBgzipDataException("Wrong compressed data block: block data incomplete to decompress");
-                } else if (ret != length) {
+                } else if (ret != inputLength) {
                     throw new MalformedBgzipDataException("Wrong compressed data block: not fully uncompressed");
                 }
                 
-                len -= length;
-                pos += length;
-                off += length;
-                cb += length;
+                if (i == 0) {
+                    precedingBlockData = inputData;
+                    precedingPos = inputOffset;
+                }
+                if (i == blocks.size() - 1) {
+                    followingBlockData = inputData;
+                    followingPos = inputOffset;
+                }
+                
+                long copyStart = 0;
+                int copyLength = inputLength;
+                if (inputOffset < pos) {
+                    long copySkip = pos - inputOffset;
+                    copyStart += copySkip;
+                    copyLength -= copySkip;
+                }
+                if (copyLength > len) {
+                    copyLength = len;
+                }
+                System.arraycopy(inputData, (int) copyStart, b, off, copyLength);
+                
+                len -= copyLength;
+                pos += copyLength;
+                off += copyLength;
+                cb += copyLength;
             } catch (DataFormatException e) {
                 throw new MalformedBgzipDataException("Wrong compressed data block: invalid zlib format", e);
             } finally {
