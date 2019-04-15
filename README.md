@@ -32,7 +32,7 @@ To use bgzf-randreader in Maven-based projects, use following dependency:
 <dependency>
     <groupId>com.vivimice</groupId>
     <artifactId>bgzf-randreader</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
