@@ -1,3 +1,5 @@
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.vivimice/bgzf-randreader/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.vivimice/bgzf-randreader)
+
 # Overview
 
 **bgzf-randreader** is a BGZF reader supports random access relative to uncompressed data.
