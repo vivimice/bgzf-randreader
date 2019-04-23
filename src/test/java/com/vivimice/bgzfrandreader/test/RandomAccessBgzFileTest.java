@@ -91,8 +91,8 @@ public class RandomAccessBgzFileTest {
             expected = out.toByteArray();
         }
         
-        int repeat = 500;
-        int step = 1024;
+        int repeat = 36;
+        int step = 65536;
         
         byte[] actual = new byte[expected.length];
         try (RandomAccessBgzFile bgzFile = new RandomAccessBgzFile(TEST_FILE)) {

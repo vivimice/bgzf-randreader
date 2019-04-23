@@ -276,19 +276,26 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
             return -1;
         }
         
+        int cb = 0;
+        
         // try read from preceding/following buffer
-        if (precedingBlockData != null 
-                && pos >= precedingPos 
-                && pos + len <= precedingPos + precedingBlockData.length) {
-            System.arraycopy(precedingBlockData, (int) (pos - precedingPos), b, off, len);
-            pos += len;
-            return len;
-        } else if (followingBlockData != null 
-                && pos >= followingPos 
-                && pos + len <= followingPos + followingBlockData.length) {
-            System.arraycopy(followingBlockData, (int) (pos - followingPos), b, off, len);
-            pos += len;
-            return len;
+        int bytesAvailableInCache = 0;
+        if (precedingBlockData != null && pos >= precedingPos) {
+            bytesAvailableInCache = (int) (precedingPos + precedingBlockData.length - pos);
+        } else if (followingBlockData != null && pos >= followingPos) {
+            bytesAvailableInCache = (int) (followingPos + followingBlockData.length - pos);
+        }
+        
+        if (bytesAvailableInCache > 0) {
+            int copyLength = Math.min(bytesAvailableInCache, len);
+            System.arraycopy(precedingBlockData, (int) (pos - precedingPos), b, off, copyLength);
+            cb += copyLength;
+            off += copyLength;
+            len -= copyLength;
+            pos += copyLength;
+            if (len == 0) {
+                return cb;
+            }
         }
         
         // find blocks
@@ -298,7 +305,6 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
         }
         blocks.addAll(blockTree.tailMap(pos).headMap(pos + len).entrySet());
         
-        int cb = 0;
         for (int i = 0; i < blocks.size(); i++) {
             Entry<Long, BgzipBlock> entry = blocks.get(i);
             BgzipBlock block = entry.getValue();
