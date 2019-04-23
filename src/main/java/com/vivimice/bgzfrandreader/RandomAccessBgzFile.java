@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
@@ -366,7 +367,7 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
         // Headers
         bb = ByteBuffer.allocateDirect(12);
         int headerBytes = channel.read(bb);
-        bb.rewind();
+        ((Buffer) bb).rewind();
         if (headerBytes != 12) {
             throw new MalformedBgzipDataException("Header is broken");
         }
@@ -391,7 +392,7 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
         // Extra Subfield
         bb = ByteBuffer.allocateDirect(xlen);
         channel.read(bb);
-        bb.rewind();
+        ((Buffer) bb).rewind();
         
         int bSize = -1;
         int remainXlen = xlen;
@@ -447,7 +448,7 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
         // ISIZE
         bb = ByteBuffer.allocateDirect(4);
         channel.read(bb);
-        bb.rewind();
+        ((Buffer) bb).rewind();
         
         final int isize = (int) BgzipUtils.readUint32(bb);  // ISIZE of BGZF is limited to 0 ~ 65536
         builder.inputLength(isize);
