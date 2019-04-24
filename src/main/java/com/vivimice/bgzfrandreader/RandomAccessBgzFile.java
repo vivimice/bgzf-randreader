@@ -47,10 +47,8 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
 
     private long pos = 0;
     
-    private long precedingPos = 0;
-    private byte[] precedingBlockData = null;
-    private long followingPos = 0;
-    private byte[] followingBlockData = null;
+    private LocalCache preceding = null;
+    private LocalCache following = null;
     
     /**
      * <p>Constructs a RandomAccessBgzFile instance using existing {@link RandomAccessFile}.</p>
@@ -278,23 +276,22 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
         
         int cb = 0;
         
-        // try read from preceding/following buffer
-        int bytesAvailableInCache = 0;
-        if (precedingBlockData != null && pos >= precedingPos) {
-            bytesAvailableInCache = (int) (precedingPos + precedingBlockData.length - pos);
-        } else if (followingBlockData != null && pos >= followingPos) {
-            bytesAvailableInCache = (int) (followingPos + followingBlockData.length - pos);
-        }
-        
-        if (bytesAvailableInCache > 0) {
-            int copyLength = Math.min(bytesAvailableInCache, len);
-            System.arraycopy(precedingBlockData, (int) (pos - precedingPos), b, off, copyLength);
-            cb += copyLength;
-            off += copyLength;
-            len -= copyLength;
-            pos += copyLength;
-            if (len == 0) {
-                return cb;
+        // try read from preceding/following cache
+        LocalCache[] caches = new LocalCache[] { preceding, following };
+        for (LocalCache cache : caches) {
+            if (cache != null && pos >= cache.pos) {
+                int bytesAvailableInCache = (int) (cache.pos + cache.data.length - pos);
+                if (bytesAvailableInCache > 0) {
+                    int copyLength = Math.min(bytesAvailableInCache, len);
+                    System.arraycopy(cache.data, (int) (pos - cache.pos), b, off, copyLength);
+                    cb += copyLength;
+                    off += copyLength;
+                    len -= copyLength;
+                    pos += copyLength;
+                    if (len == 0) {
+                        return cb;
+                    }
+                }
             }
         }
         
@@ -331,12 +328,10 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
                 }
                 
                 if (i == 0) {
-                    precedingBlockData = inputData;
-                    precedingPos = inputOffset;
+                    preceding = new LocalCache(inputOffset, inputData);
                 }
                 if (i == blocks.size() - 1) {
-                    followingBlockData = inputData;
-                    followingPos = inputOffset;
+                    following = new LocalCache(inputOffset, inputData);
                 }
                 
                 long copyStart = 0;
@@ -466,6 +461,16 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
         }
         
         return builder.build();
+    }
+    
+    private static class LocalCache {
+        final long pos;
+        final byte[] data;
+        LocalCache(long pos, byte[] data) {
+            super();
+            this.pos = pos;
+            this.data = data;
+        }
     }
     
 }
