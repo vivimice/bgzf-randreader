@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.vivimice</groupId>
     <artifactId>bgzf-randreader</artifactId>
-    <version>1.1.1</version>
+    <version>1.1.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>BGZF Random Access Reader</name>
@@ -116,7 +116,7 @@
         <url>https://github.com/vivimice/bgzf-randreader</url>
         <connection>scm:git:https://github.com/vivimice/bgzf-randreader.git</connection>
         <developerConnection>scm:git:https://github.com/vivimice/bgzf-randreader.git</developerConnection>
-      <tag>bgzf-randreader-1.1.1</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <distributionManagement>
