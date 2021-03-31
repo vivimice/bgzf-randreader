@@ -279,7 +279,7 @@ public class RandomAccessBgzFile implements Closeable, AutoCloseable {
         // try read from preceding/following cache
         LocalCache[] caches = new LocalCache[] { preceding, following };
         for (LocalCache cache : caches) {
-            if (cache != null && pos >= cache.pos && pos <= Integer.MAX_VALUE) {
+            if (cache != null && pos >= cache.pos && (pos - cache.pos) <= Integer.MAX_VALUE) {
                 int bytesAvailableInCache = (int) (cache.pos + cache.data.length - pos);
                 if (bytesAvailableInCache > 0) {
                     int copyLength = Math.min(bytesAvailableInCache, len);
